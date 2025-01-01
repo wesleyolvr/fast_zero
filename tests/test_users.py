@@ -86,3 +86,51 @@ def test_delete_user(client, user, token):
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'User deleted'}
+
+
+def test_create_user_with_email_already_exists(client, user):
+    response = client.post(
+        '/users/',
+        json={
+            'username': 'alice',
+            'email': user.email,
+            'password': 'secret',
+        },
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert response.json() == {'detail': 'Email already exists'}
+
+
+def test_create_user_with_username_already_exists(client, user):
+    response = client.post(
+        '/users/',
+        json={
+            'username': user.username,
+            'email': 'alice@example.com',
+            'password': 'secret',
+        },
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert response.json() == {'detail': 'Username already exists'}
+
+
+def test_update_user_with_current_user_different_id(client, user, token):
+    response = client.put(
+        f'/users/{user.id + 1}',
+        headers={'Authorization': f'Bearer {token}'},
+        json={
+            'username': 'bob',
+            'email': 'bob@example.com',
+            'password': 'mynewpassword',
+        },
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+def test_delete_user_with_current_user_different_id(client, user, token):
+    response = client.delete(
+        f'/users/{user.id + 1}',
+        headers={'Authorization': f'Bearer {token}'},
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json() == {'detail': 'Not enough permissions'}
